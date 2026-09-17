@@ -139,6 +139,51 @@ ai = FaceAI(camera_backend="dshow")  # or "msmf" or "auto"
 ai.start_webcam(camera_id=1)
 ```
 
+### Build a custom webcam experience
+
+For attendance screens, welcome messages, or your own interface, read webcam frames yourself and use Simple Face to detect and label each face. This example records each recognised person once and displays a custom message. Press `q` to close the window.
+
+```python
+import cv2
+from simple_face import FaceAI
+
+ai = FaceAI(camera_backend="dshow")
+ai.add_person("Zaim", "photos/zaim.jpg")
+
+attendance = set()
+camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+
+try:
+    while True:
+        success, frame = camera.read()
+        if not success:
+            break
+
+        faces = ai.recognizer_wrap.detect_faces(frame)
+        message = "Show your face to the camera"
+
+        if faces is not None:
+            for face in faces:
+                name, score = ai._process_and_draw_face(frame, face)
+                if name != "Unknown":
+                    message = f"Welcome, {name}!"
+                    if name not in attendance:
+                        attendance.add(name)
+                        print(f"{name} marked present (score: {score:.2f})")
+
+        cv2.putText(
+            frame, message, (30, 50), cv2.FONT_HERSHEY_SIMPLEX,
+            0.8, (0, 255, 0), 2, cv2.LINE_AA,
+        )
+        cv2.imshow("Simple Face Attendance", frame)
+
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+finally:
+    camera.release()
+    cv2.destroyAllWindows()
+```
+
 ## API overview
 
 | Method | Purpose |
