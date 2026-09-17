@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "simple_face"
+version = "0.1.0"
+authors = [
+  { name="Zaim Sheali", email="rehanamahmoud@gmail.com" },
+]
+description = "A simple, face recognition library for Python."
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "opencv-contrib-python",
+    "numpy",
+    "tqdm"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/zaim-tech/simple_face"
+"Bug Tracker" = "https://github.com/zaim-tech/simple_face/issues"
+
+[tool.setuptools]
+packages = ["simple_face"]
+
+[tool.setuptools.package-data]
+"simple_face" = ["models/*.onnx", "unknowns/*.jpg", "unknowns/*.jpeg", "unknowns/*.png"]
