@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "simple_face"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
   { name="Zaim Sheali", email="rehanamahmoud48@gmail.com" },
 ]
