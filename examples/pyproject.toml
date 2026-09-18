@@ -8,7 +8,7 @@ dependencies = [
     "flet-camera>=0.81.0",
     "numpy",
     "opencv-contrib-python==5.0.0.93",
-    "simple_face==0.1.0",
+    "simple_face==0.1.1",
 ]
 
 [tool.flet]
