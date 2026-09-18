@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "simple_face"
 version = "0.1.0"
 authors = [
-  { name="Zaim Sheali", email="rehanamahmoud@gmail.com" },
+  { name="Zaim Sheali", email="rehanamahmoud48@gmail.com" },
 ]
 description = "A simple, face recognition library for Python."
 readme = "README.md"
