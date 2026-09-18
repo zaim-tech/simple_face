@@ -1,0 +1,27 @@
+[project]
+name = "simple-face-flet-example"
+version = "0.1.0"
+description = "Flet Camera example for the Simple Face recognition engine"
+requires-python = ">=3.10"
+dependencies = [
+    "flet>=0.81.0",
+    "flet-camera>=0.81.0",
+    "numpy",
+    "opencv-contrib-python==5.0.0.93",
+    "simple_face==0.1.0",
+]
+
+[tool.flet]
+product = "Simple Face"
+permissions = ["camera"]
+dev_packages = { simple_face = ".." }
+
+[tool.flet.app]
+module = "app.py"
+
+[tool.flet.android]
+# OpenCV loads native libraries and configuration relative to cv2.__file__.
+extract_packages = ["cv2"]
+
+[tool.flet.ios.info]
+NSCameraUsageDescription = "This app uses the camera for on-device face recognition."

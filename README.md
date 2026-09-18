@@ -1,182 +1,64 @@
 # Simple Face
 
-**Simple Face** is a lightweight Python face-recognition library for building desktop applications that identify people from images, video files, or a live webcam. It bundles OpenCV ONNX face-detection and face-recognition models, so there is no separate model-download step.
+**Simple Face** is an offline face-recognition engine for Python applications.
+It uses OpenCV's YuNet detector and SFace embedding model, but it does not own
+your camera or user interface. That keeps one recognition API usable with an
+OpenCV desktop app, a Flet app, Kivy, or a native Android/iOS camera bridge.
 
-It is a practical starting point for classroom attendance, visitor check-in, photo review, and small computer-vision projects. Use face recognition responsibly: obtain consent, protect stored face data, and do not use it as the only basis for high-impact decisions.
+The package includes only the two ONNX models; it does **not** ship a dataset of
+strangers or create an unknown-face cache. A face is `Unknown` when it does not
+meet the configured similarity threshold.
 
-## Features
-
-- Detect and recognise faces in still images, videos, and live camera feeds.
-- Register a person from one clear reference photo.
-- Return machine-readable image results, including a name, similarity score, and bounding box.
-- Save and reload registered people as a JSON database.
-- Include bundled reference faces to help reduce incorrect matches.
-- Choose automatic, DirectShow, or Media Foundation camera backends on Windows.
-
-## Supported platforms and devices
-
-| Platform | Status | Camera support |
-| --- | --- | --- |
-| Windows | Supported | Built-in and USB webcams; automatic backend selection, DirectShow, and Media Foundation are available. |
-| macOS | Supported through Python and OpenCV | Built-in and USB webcams exposed to OpenCV. |
-| Linux | Supported through Python and OpenCV | Built-in, USB, and other cameras exposed to OpenCV. |
-| Android / iOS | Not supported directly | Use a desktop/server application or build a separate mobile integration. |
-
-The library requires Python 3.7 or newer. Camera availability ultimately depends on your operating system permissions, OpenCV installation, and the device driver.
-
-## Installation
-
-Clone this repository and install it from its root directory:
+## Install
 
 ```bash
-git clone https://github.com/zaim-tech/simple_face.git
-cd simple_face
 pip install .
 ```
 
-For local development, use an editable installation:
+The package uses `opencv-contrib-python`. Flet provides compatible mobile
+OpenCV packages for Android and iOS; the included Flet project configures this
+correctly for its mobile builds.
 
-```bash
-pip install -e .
-```
+## Universal integration
 
-The installation includes `opencv-contrib-python`, `numpy`, and `tqdm`.
-
-## Quick start
-
-Place a clear, front-facing photo of each person somewhere accessible to your script. Then register the person and start the webcam:
+Your framework opens the camera, converts its image into a NumPy array, and
+calls `recognize_frame()`. The library returns plain dictionaries, making it
+easy to draw labels using any UI toolkit.
 
 ```python
 from simple_face import FaceAI
 
-ai = FaceAI()
-ai.add_person("Zaim", "photos/zaim.jpg")
-ai.add_person("Alice", "photos/alice.jpg")
+ai = FaceAI(threshold=0.363)
 
-# Press q in the video window to stop.
-ai.start_webcam(camera_id=0)
+# Enrol from any frame.  Flet/Kivy/mobile camera plugins often provide RGB.
+ai.enroll_frame("Alice", camera_rgb_frame, color_format="rgb")
+
+# Call this for selected live-stream frames (for example, 2–5 times per second).
+faces = ai.recognize_frame(camera_rgb_frame, color_format="rgb")
+# [{"name": "Alice", "score": 0.71, "box": [x, y, width, height]}]
 ```
 
-`add_person()` returns `True` when a face was found and registered, otherwise `False`.
+`color_format` accepts `"bgr"` (the default for OpenCV), `"rgb"`, and
+`"rgba"`. The host application should render the live preview and draw each
+result box itself. This avoids desktop-only OpenCV windows and camera APIs.
 
-## Usage examples
-
-### Recognise faces in one image
-
-Use `return_results=True` when your app needs data instead of an OpenCV preview window.
-
-```python
-from simple_face import FaceAI
-
-ai = FaceAI()
-ai.add_person("Zaim", "photos/zaim.jpg")
-
-results = ai.check_image("photos/group-photo.jpg", return_results=True)
-for face in results or []:
-    print(face["name"], face["score"], face["box"])
-```
-
-Each result has this shape:
-
-```python
-{"name": "Zaim", "score": 0.72, "box": [x, y, width, height]}
-```
-
-Without `return_results=True`, `check_image()` opens a labelled preview window. Press any key to close it.
-
-### Scan a recorded video
-
-```python
-from simple_face import FaceAI
-
-ai = FaceAI()
-ai.add_person("Alice", "photos/alice.jpg")
-ai.check_video("videos/event.mp4")
-```
-
-Press `q` to stop the video early.
-
-### Save registered people and load them later
-
-```python
-from simple_face import FaceAI
-
-# First run: create the database.
-ai = FaceAI()
-ai.add_person("Zaim", "photos/zaim.jpg")
-ai.add_person("Alice", "photos/alice.jpg")
-ai.save_db("faces.json")
-
-# A later run: reuse it.
-ai = FaceAI()
-ai.load_db("faces.json")
-ai.start_webcam()
-```
-
-The saved JSON contains face embeddings. Treat it as sensitive biometric data and keep it out of public repositories.
-
-### Use a custom unknown-faces folder
-
-The package contains bundled unknown-face references. You can supply your own folder of `.jpg`, `.jpeg`, or `.png` images instead:
-
-```python
-from simple_face import FaceAI
-
-ai = FaceAI(
-    threshold=0.363,
-    unknowns_folder="training/unknown-faces",
-)
-```
-
-### Choose a Windows camera backend
-
-If a webcam has trouble opening on Windows, try a specific backend:
-
-```python
-from simple_face import FaceAI
-
-ai = FaceAI(camera_backend="dshow")  # or "msmf" or "auto"
-ai.start_webcam(camera_id=1)
-```
-
-### Build a custom webcam experience
-
-For attendance screens, welcome messages, or your own interface, read webcam frames yourself and use Simple Face to detect and label each face. This example records each recognised person once and displays a custom message. Press `q` to close the window.
+## Desktop OpenCV example
 
 ```python
 import cv2
 from simple_face import FaceAI
 
-ai = FaceAI(camera_backend="dshow")
-ai.add_person("Zaim", "photos/zaim.jpg")
+ai = FaceAI()
+ai.add_person("Alice", "photos/alice.jpg")
 
-attendance = set()
-camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-
+camera = cv2.VideoCapture(0)
 try:
     while True:
-        success, frame = camera.read()
-        if not success:
+        ok, frame = camera.read()
+        if not ok:
             break
-
-        faces = ai.recognizer_wrap.detect_faces(frame)
-        message = "Show your face to the camera"
-
-        if faces is not None:
-            for face in faces:
-                name, score = ai._process_and_draw_face(frame, face)
-                if name != "Unknown":
-                    message = f"Welcome, {name}!"
-                    if name not in attendance:
-                        attendance.add(name)
-                        print(f"{name} marked present (score: {score:.2f})")
-
-        cv2.putText(
-            frame, message, (30, 50), cv2.FONT_HERSHEY_SIMPLEX,
-            0.8, (0, 255, 0), 2, cv2.LINE_AA,
-        )
-        cv2.imshow("Simple Face Attendance", frame)
-
+        results = ai.recognize_frame(frame)
+        cv2.imshow("Recognition", ai.draw_results(frame, results))
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 finally:
@@ -184,34 +66,85 @@ finally:
     cv2.destroyAllWindows()
 ```
 
-## API overview
+## Flet Camera example
+
+The ready-to-run Flet example is [examples/app.py](examples/app.py). It enrols
+`examples/zaim.png` as **Zaim**, opens a Flet Camera preview, and renders a
+second live preview containing OpenCV's `Zaim` or `Unknown` labels and boxes.
+
+Install the example dependencies, then run it from the repository root:
+
+```bash
+pip install -e .
+pip install "flet>=0.81.0" "flet-camera>=0.81.0"
+flet run examples/app.py
+```
+
+The recognition path is:
+
+```text
+Flet Camera frame bytes
+→ cv2.imdecode()
+→ FaceAI.recognize_frame()
+→ FaceAI.draw_results()
+→ JPEG bytes displayed by ft.Image
+```
+
+The essential frame handler is:
+
+```python
+def on_stream_image(event: fc.CameraImageEvent):
+    frame = cv2.imdecode(np.frombuffer(event.bytes, np.uint8), cv2.IMREAD_COLOR)
+    faces = ai.recognize_frame(frame)
+    labelled = ai.draw_results(frame, faces)
+    _, jpeg = cv2.imencode(".jpg", labelled)
+    result_image.src = jpeg.tobytes()
+    result_image.update()
+```
+
+Flet Camera supports Android, iOS, and web. On Android/iOS devices that support
+image streaming, the example processes the live `on_stream_image` feed. Some
+browser/camera combinations provide a preview but no image stream; the example
+then falls back to repeated `take_picture()` captures. That fallback is slower
+but still performs labelled recognition.
+
+Build Android from the example directory:
+
+```bash
+cd examples
+flet build apk
+```
+
+[examples/pyproject.toml](examples/pyproject.toml) declares camera permission
+and `extract_packages = ["cv2"]`, required for OpenCV on Android. Build iOS
+from macOS with `flet build ipa`.
+
+## API
 
 | Method | Purpose |
 | --- | --- |
-| `FaceAI(threshold=0.363, unknowns_folder=None, camera_backend="auto")` | Creates the recogniser. |
-| `add_person(name, image_path)` | Adds one person from a reference image. |
-| `check_image(image_path, return_results=False)` | Recognises all faces in an image. |
-| `start_webcam(camera_id=0)` | Starts real-time webcam recognition. |
-| `check_video(video_path)` | Recognises faces frame by frame in a video. |
-| `save_db(path="faces_db.json")` | Saves known-person embeddings. |
-| `load_db(path="faces_db.json")` | Loads known-person embeddings. |
-| `clear_db(clear_unknowns=False)` | Clears registered people; optionally also clears unknown references. |
+| `FaceAI(threshold=0.363)` | Creates the offline recognizer. |
+| `enroll_frame(name, frame, color_format="bgr")` | Enrols the largest face from any camera/UI frame. |
+| `recognize_frame(frame, color_format="bgr")` | Returns result dictionaries; does not open a window. |
+| `add_person(name, image_path)` | Desktop helper to enrol from a file. |
+| `draw_results(frame, results)` | Optional OpenCV-only drawing helper. |
+| `save_db(path)` / `load_db(path)` | Stores or restores enrolment embeddings. |
+| `start_webcam(camera_id=0)` | Optional desktop OpenCV demo, not for mobile apps. |
 
-## Tips for better recognition
+## Mobile notes
 
-- Use sharp, well-lit, front-facing reference photos with one visible face.
-- Register more than one good photo per person only if you manage the entries deliberately; registering again with the same name replaces its previous embedding.
-- Adjust `threshold` carefully: higher values make matches stricter; lower values accept more possible matches.
-- Make sure your operating system has granted Python or your terminal camera permission.
+- Use Flet/Kivy/native code for camera permission and live preview.
+- The Flet example runs recognition on a background task and drops incoming
+  frames only while inference is busy, preventing a laggy processing queue.
+- Store `faces_db.json` only in private app storage; embeddings are sensitive
+  biometric data.
+- Test thresholds with your own consented users before release. A default of
+  `0.363` is the SFace cosine threshold used by OpenCV's example, not a
+  universal security guarantee.
 
-## Project example
-
-See [examples/main.py](examples/main.py) for a customised webcam attendance-style example using `examples/zaim.png`.
+Use face recognition only with informed consent and never as the sole basis for
+high-impact decisions.
 
 ## License
 
 MIT License.
-
----
-
-Made with ❤️ by Zaim Sheali

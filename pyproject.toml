@@ -18,8 +18,7 @@ classifiers = [
 ]
 dependencies = [
     "opencv-contrib-python",
-    "numpy",
-    "tqdm"
+    "numpy"
 ]
 
 [project.urls]
@@ -30,4 +29,4 @@ dependencies = [
 packages = ["simple_face"]
 
 [tool.setuptools.package-data]
-"simple_face" = ["models/*.onnx", "unknowns/*.jpg", "unknowns/*.jpeg", "unknowns/*.png"]
+"simple_face" = ["models/*.onnx"]
